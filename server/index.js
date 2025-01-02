@@ -2,6 +2,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
+import { cosineSimilarity, textSimilarity } from './utils/evaluators';
 
 const prisma = new PrismaClient()
 const app = express();
@@ -47,6 +48,20 @@ app.get('/evaluations?response_id=', async (req,res) => {
     res.json(evaluations)
 })
 
+app.get('/avilable_llms', (req,res) => {
+    const AVAILABLE_LLMS = [
+        "gemini-1.5-flash",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+        "mixtral-8x7b-32768"
+    ];
+
+    res.json(AVAILABLE_LLMS)
+})
+
 // POST routes
 
 
@@ -70,6 +85,8 @@ app.post('/new_expirment', async(req,res) => {
     const expirment = await prisma.experiment.create({
         data: {
             project_id,
+            title,
+            description,
             Eval_criteria,
             prompt,
             expected_out
@@ -92,7 +109,19 @@ app.post('/new_response', async(req,res) => {
 })
 
 app.post('/new_evaluation', async(req,res) => {
-    const {response_id, criteria, score, comments} = req.body
+    const {response_id, criteria} = req.body
+    const response = await prisma.response.findUnique({
+        where: {
+            id: response_id
+        }
+    })
+    let score = 0
+    let comments = ""
+
+    if (criteria == "cosine similarity"){
+        textSimilarity()
+    }
+
     const evaluation = await prisma.evaluations.create({
         data: {
             response_id,
