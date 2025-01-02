@@ -97,7 +97,37 @@ app.post('/new_expirment', async(req,res) => {
 })
 
 app.post('/new_response', async(req,res) => {
-    const {experiment_id, LLM_Responses, response_times} = req.body
+    const {experiment_id} = req.body
+    const expirment = await prisma.experiment.findUnique({
+        where: {
+            id: experiment_id
+        }
+    })
+    if (!expirment) {
+        return res.status(404).json({error: 'Expirment not found'})
+    }
+    const project = await prisma.projects.findUnique({
+        where: {
+            id: expirment.project_id
+        }
+    })
+
+
+    if (!project){
+        return res.status(404).json({error: 'Project not found'})
+    }
+
+
+    const prompt = expirment.prompt
+    const LLMs = project.LLMs
+    let LLM_Responses = {
+
+    }
+    for (let i = 0; i < LLMs.length; i++){
+        const LLM = LLMs[i]
+        
+    }
+
     const response = await prisma.response.create({
         data: {
             experiment_id,
