@@ -1,5 +1,5 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-import { getGeminiResponse } from "./geminiClient";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiResponse } from "./geminiClient.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "text-embedding-004"});
@@ -30,14 +30,14 @@ export async function textSimilarity(text1,text2){
 
 export async function LLMEvaluate(response,expected_output, model){
     response = await getGeminiResponse(
-        prompt=`compare these results , this is the LLM response: ${response} and this is the expected output ${expected_output} `,
+        user_prompt=`compare these results , this is the LLM response: ${response} and this is the expected output ${expected_output} `,
         sys_prompt = `you are an LLM evaluator you will get the llm reponse and the expected response then reurn a number from 0 to 1 indecating its accuracy and also a short comment on the LLM performance 
         You MUST use this JSON format 
         {
             "score": 0.90,
-            "coment":"your comment should be here"
+            "comment":"your comment should be here"
         }`,
-        model="gemini-2.0-flash-exp"
+        llm_model="gemini-2.0-flash-exp"
     )
     return response
 }

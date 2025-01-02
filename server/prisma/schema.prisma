@@ -32,7 +32,7 @@ model Experiment {
   project_id        Int
   title             String
   description       String?
-  Eval_criteria     String[]     // Array of evaluation criteria
+  Eval_criteria     String 
   prompt            String
   expected_out      String
   Response          Response[]
@@ -45,7 +45,6 @@ model Response {
   experiment        Experiment    @relation(fields: [experiment_id], references: [id], onDelete: Cascade)
   experiment_id     Int
   LLM_Responses     Json[]        // Structured responses with metadata
-  response_times    Json[]        // Response times for each LLM
   Evaluations       Evaluations[]
   created_at        DateTime      @default(now())
 }
@@ -54,6 +53,8 @@ model Evaluations {
   id                String       @id @default(uuid())
   response          Response     @relation(fields: [response_id], references: [id], onDelete: Cascade)
   response_id       String
+  llm               String       // Name of the LLM used for evaluation
+  responseTime      Float        // Time taken for the LLM response
   criteria          String       // Evaluation criteria (accuracy, relevancy, etc.)
   score             Float      
   comments          String?

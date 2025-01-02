@@ -1,8 +1,11 @@
 // Import Express
-import express from 'express';
+import express, { text } from 'express';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
-import { cosineSimilarity, textSimilarity } from './utils/evaluators';
+import { textSimilarity } from './utils/evaluators.js';
+import { getGroqResponse } from './utils/groqClient.js';
+import { LLMEvaluate } from './utils/evaluators.js';
+import { getGeminiResponse } from './utils/geminiClient.js';
 
 const prisma = new PrismaClient()
 const app = express();
@@ -120,47 +123,115 @@ app.post('/new_response', async(req,res) => {
 
     const prompt = expirment.prompt
     const LLMs = project.LLMs
-    let LLM_Responses = {
+    let LLM_Responses = [
 
-    }
+    ]
     for (let i = 0; i < LLMs.length; i++){
         const LLM = LLMs[i]
-        
+        if (LLM.startsWith("gemini-")){
+            const response = await getGeminiResponse(prompt,project.system_prompt,LLM)
+            LLM_Responses.push({
+                llm: LLM,
+                responseTime: response.responseTime,
+                response: response.response
+            })
+        } else{
+            const response = await getGroqResponse(prompt,project.system_prompt,LLM)
+            LLM_Responses.push({
+                llm: LLM,
+                responseTime: response.responseTime,
+                response: response.response
+            })
+        }
     }
 
     const response = await prisma.response.create({
         data: {
             experiment_id,
             LLM_Responses,
-            response_times
         }
     })
     res.json(response)
 })
 
 app.post('/new_evaluation', async(req,res) => {
-    const {response_id, criteria} = req.body
+    const {response_id} = req.body
     const response = await prisma.response.findUnique({
         where: {
             id: response_id
         }
     })
-    let score = 0
-    let comments = ""
-
-    if (criteria == "cosine similarity"){
-        textSimilarity()
-    }
-
-    const evaluation = await prisma.evaluations.create({
-        data: {
-            response_id,
-            criteria,
-            score,
-            comments
+    const expirment = await prisma.experiment.findUnique({
+        where:{
+            id: response.experiment_id
         }
     })
-    res.json(evaluation)
+    const project = await prisma.projects.findUnique({
+        where: {
+            id: expirment.project_id
+        }
+    })
+    const LLM_Responses = response.LLM_Responses
+    const criteria = expirment.Eval_criteria
+    const expected_output = expirment.expected_out
+    const llm_evaluator = project.Eval_LLM
+
+    async function eval_response(response,expected_output,criteria,llm_evaluator) {
+        if (criteria === "accuracy"){
+            const similarity = textSimilarity(response,expected_output)
+            return {
+                score:similarity*100,
+                comments: `The similarity between the response and the expected output is ${similarity*100}%`
+            }
+        }else if (criteria === "llm_evaluator"){
+            const evaluator_response = await LLMEvaluate(response,expected_output,llm_evaluator)
+            let text = evaluator_response
+            text = text.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, '$1');
+            const json = JSON.parse(text)
+            return {
+                score:json.score,
+                comments: json.comment
+            }
+        }
+            
+        
+    }
+        
+    const evaulations = [
+
+    ]
+
+
+    
+    for (let i = 0; i < LLM_Responses.length; i++){
+        const LLM_Response = LLM_Responses[i]
+        const response = LLM_Response.response
+        const evaluation = await eval_response(response,expected_output,criteria,llm_evaluator)
+        evaulations.push(
+            {
+                llm: LLM_Response.llm,
+                responseTime: LLM_Response.responseTime,
+                score: evaluation.score,
+                comments: evaluation.comments
+            }
+        )
+    }
+
+    for (let i = 0; i < evaulations.length; i++){
+        const evaluation = evaulations[i]
+        await prisma.evaluations.create({
+            data: {
+                response_id,
+                llm: evaluation.llm,
+                responseTime: evaluation.responseTime,
+                criteria,
+                score: evaluation.score,
+                comments: evaluation.comments
+            }
+        })
+    }
+
+    res.json(evaulations)
 })
 
 

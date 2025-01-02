@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-export async function getGeminiResponse(prompt,sys_prompt,model) {
+export async function getGeminiResponse(user_prompt,sys_prompt,llm_model) {
     const startTime = performance.now();
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: model,systemInstruction: sys_prompt });
-    const prompt = prompt;
-    const result = await model.generateContent(prompt);
+    const model = genAI.getGenerativeModel({ model: llm_model,systemInstruction: sys_prompt });
+    const prompt = user_prompt;
+    const result = await model.generateContent(user_prompt);
 
     const endTime = performance.now();
     const responseTime = endTime - startTime;
