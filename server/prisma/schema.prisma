@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Projects {
+  id                Int           @id @default(autoincrement())
+  title             String
+  description       String?
+  system_prompt     String
+  LLMs              String[]      // Available LLMs for this project
+  Eval_LLM          String        // LLM used for evaluation
+  Experiment        Experiment[]
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+}
+
+model Experiment {
+  id                Int          @id @default(autoincrement())
+  project           Projects     @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  project_id        Int
+  title             String
+  description       String?
+  Eval_criteria     String[]     // Array of evaluation criteria
+  prompt            String
+  expected_out      String
+  Response          Response[]
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+}
+
+model Response {
+  id                String        @id @default(uuid())
+  experiment        Experiment    @relation(fields: [experiment_id], references: [id], onDelete: Cascade)
+  experiment_id     Int
+  LLM_Responses     Json[]        // Structured responses with metadata
+  response_times    Json[]        // Response times for each LLM
+  Evaluations       Evaluations[]
+  created_at        DateTime      @default(now())
+}
+
+model Evaluations {
+  id                String       @id @default(uuid())
+  response          Response     @relation(fields: [response_id], references: [id], onDelete: Cascade)
+  response_id       String
+  criteria          String       // Evaluation criteria (accuracy, relevancy, etc.)
+  score             Float      
+  comments          String?
+  created_at        DateTime     @default(now())
+}
