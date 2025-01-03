@@ -2,6 +2,8 @@
 import express, { text } from 'express';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
+import morgan from 'morgan';
+import winston from 'winston';
 import { textSimilarity } from './utils/evaluators.js';
 import { getGroqResponse } from './utils/groqClient.js';
 import { LLMEvaluate } from './utils/evaluators.js';
@@ -10,9 +12,47 @@ import { getGeminiResponse } from './utils/geminiClient.js';
 const prisma = new PrismaClient()
 const app = express();
 app.use(cors());
+
+app.use(morgan('dev'));
 app.use(express.json());
 
-// Define a route
+
+const logger = winston.createLogger({
+    level: 'info', // Minimum log level to output
+    format: winston.format.json(), // Log in JSON format
+    transports: [
+      new winston.transports.Console(), // Output to console
+    ],
+  });
+  
+  // Middleware to log requests
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.info({
+        message: 'Incoming request',
+        method: req.method,
+        url: req.originalUrl,
+        status: res.statusCode,
+        duration,
+        userAgent: req.get('user-agent'),
+        ip: req.ip,
+      });
+    });
+    next();
+  });
+  
+app.use((err, req, res, next) => {
+    logger.error({
+        message: 'An error occurred',
+        error: err.message,
+        stack: err.stack,
+    });
+    res.status(500).send('Something went wrong!');
+});
+
+
 app.get('/', (req, res) => {
     res.send('Welcome to the Express.js Tutorial');
 });
@@ -21,7 +61,20 @@ app.get('/projects', async (req,res) => {
     const projects = await prisma.projects.findMany()
     res.json(projects)
 })
-app.get('/expirments?project_id=', async (req,res) => {
+
+app.get('/project', async(req,res)=>{
+    const {id} = req.query
+    const project = await prisma.projects.findUnique({
+        where: {
+            id: Number(id)
+        }
+    })
+    if (!project){
+        return res.status(404).json({error: 'Project not found'})
+    }
+    res.json(project)
+})
+app.get('/expirments', async (req,res) => {
     const {project_id} = req.query
     const expirments = await prisma.experiment.findMany({
         where: {
@@ -31,17 +84,17 @@ app.get('/expirments?project_id=', async (req,res) => {
     res.json(expirments)
 })
 
-app.get('/response?expirment_id=', async (req,res) => {
-    const {expirment_id} = req.query
+app.get('/response', async (req,res) => {
+    const {experiment_id} = req.query
     const response = await prisma.response.findMany({
         where: {
-            expirment_id: Number(expirment_id)
+            experiment_id: Number(experiment_id)
         }
     })
     res.json(response)
 })
 
-app.get('/evaluations?response_id=', async (req,res) => {
+app.get('/evaluations', async (req,res) => {
     const {response_id} = req.query
     const evaluations = await prisma.evaluations.findMany({
         where: {
@@ -50,6 +103,41 @@ app.get('/evaluations?response_id=', async (req,res) => {
     })
     res.json(evaluations)
 })
+
+app.get('/analytics', async (req,res) => {
+
+    const responseCount = await prisma.evaluations.count() // responses count
+    const experimentsCount = await prisma.experiment.count() // experiments count
+    const evaulations = await prisma.evaluations.findMany();
+    // Avg response time
+    let totalResponseTime = 0;
+    let totalScore = 0;
+    for (let i = 0; i < evaulations.length; i++){
+        totalResponseTime += evaulations[i].responseTime;
+        totalScore += evaulations[i].score;
+    }
+    const avgResponseTime = totalResponseTime / evaulations.length; 
+
+    const avgScore = totalScore / evaulations.length; // avg score
+
+    res.json({
+        "responseCount":responseCount,
+        "experimentsCount":experimentsCount,
+        "avgResponseTime":avgResponseTime,
+        "avgScore":avgScore
+    })
+})
+
+app.get('/scores', async (req,res) =>{
+    const evaluations = await prisma.evaluations.findMany();
+    const scores = []
+    for (let i = 0; i < evaluations.length; i++){
+        scores.push(evaluations[i].score)
+    }
+    res.json(scores)
+})
+
+
 
 app.get('/avilable_llms', (req,res) => {
     const AVAILABLE_LLMS = [
@@ -69,8 +157,10 @@ app.get('/avilable_llms', (req,res) => {
 
 
 
-app.post('/new_project', async(req,res) => {
+app.post('/new-project', async(req,res) => {
     const {title, description, system_prompt, LLMs, Eval_LLM} = req.body
+    console.log(`Starting the '/new_project' route with body: ${JSON.stringify(req.body)}`);
+
     const project = await prisma.projects.create({
         data: {
             title,
@@ -185,12 +275,23 @@ app.post('/new_evaluation', async(req,res) => {
             }
         }else if (criteria === "llm_evaluator"){
             const evaluator_response = await LLMEvaluate(response,expected_output,llm_evaluator)
-            let text = evaluator_response
-            text = text.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, '$1');
-            const json = JSON.parse(text)
+            let text = evaluator_response.response
+            console.log(typeof text)
+            // text = text.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, '$1');
+            // const json = JSON.parse(text)
+
+            if (typeof text !== 'string') {
+                text = JSON.stringify(text); 
+            }else{
+                text = text.replace(/```json\s*/i, '').replace(/\s*```$/, '').trim().replace('```','');                   
+            
+                text = JSON.parse(text)
+            }
+            console.log(text)
+
             return {
-                score:json.score,
-                comments: json.comment
+                score:text.score,
+                comments: text.comment
             }
         }
             
