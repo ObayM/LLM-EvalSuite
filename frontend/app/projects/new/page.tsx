@@ -48,7 +48,7 @@ const NewProjectPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('/new_project', {
+      const response = await fetch('https://5000-idx-llm-evaluation-1735645177260.cluster-rcyheetymngt4qx5fpswua3ry4.cloudworkstations.dev/new-project', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ const NewProjectPage: React.FC = () => {
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                className="text-black w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                 placeholder="Enter project title"
                 required
               />
@@ -106,7 +106,7 @@ const NewProjectPage: React.FC = () => {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none h-24"
+                className="text-black  w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none h-24"
                 placeholder="Describe your project"
               />
             </div>
@@ -116,7 +116,7 @@ const NewProjectPage: React.FC = () => {
               <textarea
                 value={formData.system_prompt}
                 onChange={(e) => setFormData(prev => ({ ...prev, system_prompt: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none h-32"
+                className="text-black w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all resize-none h-32"
                 placeholder="Enter system prompt"
                 required
               />
@@ -130,7 +130,7 @@ const NewProjectPage: React.FC = () => {
                     key={llm}
                     type="button"
                     onClick={() => toggleLLM(llm)}
-                    className={`px-4 py-2.5 rounded-xl border text-sm font-medium flex items-center justify-between transition-all ${
+                    className={`text-black px-4 py-2.5 rounded-xl border text-sm font-medium flex items-center justify-between transition-all ${
                       formData.LLMs.includes(llm)
                         ? 'border-indigo-500 bg-indigo-50 text-indigo-600'
                         : 'border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
@@ -148,7 +148,7 @@ const NewProjectPage: React.FC = () => {
               <select
                 value={formData.Eval_LLM}
                 onChange={(e) => setFormData(prev => ({ ...prev, Eval_LLM: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                className="text-black w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                 required
               >
                 <option value="">Select an LLM</option>
@@ -161,7 +161,7 @@ const NewProjectPage: React.FC = () => {
             <div className="flex items-center justify-end gap-4 pt-4">
               <Link
                 href="/projects"
-                className="px-6 py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                className="text-black px-6 py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancel
               </Link>
