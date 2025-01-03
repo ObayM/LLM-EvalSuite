@@ -4,27 +4,45 @@ import { getGeminiResponse } from "./geminiClient.js";
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "text-embedding-004"});
 
-export  function cosineSimilarity(vector1, vector2){
+export function cosineSimilarity(vector1, vector2) {
     const dotProduct = vector1.reduce((sum, val, i) => sum + val * vector2[i], 0);
-    const magnitude1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
-    const magnitude2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
+    const magnitude1 = Math.sqrt(vector1.reduce((sum, val) => sum + val * val, 0));
+    const magnitude2 = Math.sqrt(vector2.reduce((sum, val) => sum + val * val, 0));
 
     if (magnitude1 === 0 || magnitude2 === 0) {
-        return 0; // Avoid division by zero
+        return 0; 
     }
-
     return dotProduct / (magnitude1 * magnitude2);
 }
 
 async function embedText(text) {
-    const result = await model.embedContent(text);
-    return result.embedding.values
+    try {
+        const result = await model.embedContent({model: "text-embedding-004", content: {parts: [{text}]}});
+        console.log(result.embedding.values)
+
+        return result.embedding.values;
+    } catch (error) {
+        console.error("Error embedding text:", error);
+        return null;
+    }
 }
 
-export async function textSimilarity(text1,text2){
-    const vec1 = await embedText(text1)
-    const vec2 = await embedText(text2)
-    return cosineSimilarity(vec1,vec2)
+export async function textSimilarity(text1, text2) {
+    try {
+        const vec1 = await embedText(text1);
+        const vec2 = await embedText(text2);
+
+        if (vec1 === null || vec2 === null) {
+            console.error("One or both embeddings failed.");
+            return 0; 
+        }
+        console.log(vec1,vec2)
+
+        return cosineSimilarity(vec1, vec2);
+    } catch (error) {
+        console.error("Error calculating text similarity:", error);
+        return 0; // Or handle the error as needed
+    }
 }
 
 

@@ -18,10 +18,10 @@ app.use(express.json());
 
 
 const logger = winston.createLogger({
-    level: 'info', // Minimum log level to output
-    format: winston.format.json(), // Log in JSON format
+    level: 'info', 
+    format: winston.format.json(), 
     transports: [
-      new winston.transports.Console(), // Output to console
+      new winston.transports.Console(), 
     ],
   });
   
@@ -268,7 +268,9 @@ app.post('/new_evaluation', async(req,res) => {
 
     async function eval_response(response,expected_output,criteria,llm_evaluator) {
         if (criteria === "accuracy"){
-            const similarity = textSimilarity(response,expected_output)
+            const similarity = await textSimilarity(response,expected_output)
+            // console.log(response)
+            // console.log("\n"+expected_output)
             return {
                 score:similarity*100,
                 comments: `The similarity between the response and the expected output is ${similarity*100}%`
